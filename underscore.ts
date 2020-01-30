@@ -3,7 +3,751 @@
 //     (c) 2009-2018 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 //     Underscore may be freely distributed under the MIT license.
 
-(function() {
+declare var global: any;
+
+export type ArgumentsType<F extends Function> = F extends (...args: infer A) => any ? A : never;
+
+// class CallableClass<Fn extends (...args: any) => any> {
+//   constructor(fn: Fn) {
+//     return Object.setPrototypeOf(fn, new.target.prototype);
+//   }
+// }
+
+// interface CallableClass<Fn extends (...args: any) => any, C = any> {
+//   new(fn: Fn): Fn & C;
+//   (...args: ArgumentsType<Fn>): ReturnType<Fn>;
+// }
+
+type Dict<T> = Record<string, T>;
+
+// interface UnderscoreFunction {
+//   <T>(value: Dict<T>): BoundUnderscore<T>
+//   <T>(value: T[]): BoundUnderscore<T>;
+//   <T>(value: T): BoundUnderscore<T>;
+// }
+
+type ListIterator<List extends any[], Result, Context = typeof globalThis> =
+  (this: Context, value: List[number], index: number, list: List) => Result;
+
+type DictIterator<D extends Dict<any>, Result, Context = typeof globalThis> =
+  <K extends keyof D>(this: Context, value: D[K], key: K, dict: D) => Result;
+
+type MemoListIterator<List extends any[], Memo, Context = typeof globalThis> =
+  (this: Context, memo: Memo, current: List[number], index: number, list: List) => Memo;
+
+type MemoDictIterator<D extends Dict<any>, Memo, Context = typeof globalThis> =
+  <K extends keyof D>(this: Context, memo: Memo, current: D[K], key: K, dict: D) => Memo;
+
+type NonArraysIn<T> = Exclude<T, any[]>;
+type ArraysIn<T> = Extract<T, any[]>;
+type UnionizeArray<T> = T extends any[] ? T[number] : T;
+
+interface DeepDictUnionizeArray<T> {
+  [index: string]: NonArraysIn<T> | (ArraysIn<T> extends never ? never : DeepDictUnionizeArray<UnionizeArray<T>>)[string];
+}
+
+type DeepUnionizeArray<T> = DeepDictUnionizeArray<T>[string];
+type DeepFlattenArray<T> = DeepUnionizeArray<T>[];
+
+// export default class Underscore extends CallableClass<UnderscoreFunction> {
+export interface Underscore {
+  /**
+   * Underscore OOP Wrapper, all Underscore functions that take an object
+   * as the first parameter can be invoked through this function.
+   * @param value First argument to Underscore object functions.
+   **/
+  <T>(value: Dict<T>): BoundUnderscore<T>
+  <T>(value: T[]): BoundUnderscore<T>;
+  <T>(value: T): BoundUnderscore<T>;
+
+  /**
+   * Iterates over a list of elements, yielding each in turn to an iterator function. The iterator is
+   * bound to the context object, if one is passed. Each invocation of iterator is called with three
+   * arguments: (value, index, list). If list is a JavaScript object, iterator's arguments will be
+   * (value, key, object). Delegates to the native forEach function if it exists.
+   * @param list Iterates over this list of elements.
+   * @param iterator Iterator function for each value in `list`.
+   * @param context 'this' object in `iterator` (optional).
+   **/
+  each<List extends any[], Context>(
+    list: List,
+    iterator: ListIterator<List, void, Context>,
+    context?: Context,
+  ): List;
+
+  /**
+   * @see _.each
+   * @param dict Iterates over this list of elements.
+   * @param iterator Iterator function for each value and key in `dict`.
+   * @param context 'this' object in `iterator` (optional).
+   **/
+  each<D extends Dict<any>, Context>(
+    dict: D,
+    iterator: DictIterator<D, void, Context>,
+    context?: Context,
+  ): D;
+
+  /**
+   * @see _.each
+   * @param list Iterates over this list of elements.
+   * @param iterator Iterator function for each value in `list`.
+   * @param context 'this' object in `iterator` (optional).
+   **/
+  forEach: Underscore['each'];
+
+  map<List extends any[], Result, Context>(
+    list: List,
+    iterator: ListIterator<List, Result, Context>,
+    context?: Context,
+  ): Result[];
+
+  map<Member, Prop extends keyof Member, Context>(
+    list: Member[],
+    iterator: Prop,
+    context?: Context,
+  ): Member[Prop][];
+
+  map<List extends any[], Result, Context>(
+    list: List,
+    iterator: Partial<List[number]>,
+    context?: Context,
+  ): boolean[];
+
+  map<D extends Dict<any>, Result, Context>(
+    dict: D,
+    iterator: DictIterator<D, Result, Context>,
+    context?: Context,
+  ): Result[];
+
+  collect: Underscore['map'];
+
+  reduce<List extends any[], Memo, Context>(
+    list: List,
+    iterator: MemoListIterator<List, Memo, Context>,
+    memo?: Memo,
+    context?: Context,
+  ): Memo;
+
+  reduce<D extends Dict<any>, Memo, Context>(
+    dict: D,
+    iterator: MemoDictIterator<D, Memo, Context>,
+    memo?: Memo,
+    context?: Context,
+  ): Memo;
+
+  inject: Underscore['reduce'];
+
+  foldl: Underscore['reduce'];
+
+  reduceRight: Underscore['reduce'];
+
+  foldr: Underscore['reduce'];
+
+  find<T, Context>(
+    list: T[],
+    iterator: ListIterator<T[], boolean, Context>,
+    context?: Context,
+  ): T | undefined;
+
+  find<T, Context>(
+    dict: Dict<T>,
+    iterator: DictIterator<Dict<T>, boolean, Context>,
+    context?: Context,
+  ): T | undefined;
+
+  find<T, Context>(
+    corpus: T[] | Dict<T>,
+    iterator: keyof T | Partial<T>,
+    context?: Context,
+  ): T | undefined;
+
+  detect: Underscore['find'];
+
+  filter<T, Context>(
+    list: T[],
+    iterator: ListIterator<T[], boolean, Context>,
+    context?: Context,
+  ): T[];
+
+  filter<T, Context>(
+    dict: Dict<T>,
+    iterator: DictIterator<Dict<T>, boolean, Context>,
+    context?: Context,
+  ): T[];
+
+  filter<T, Context>(
+    corpus: T[] | Dict<T>,
+    iterator: keyof T | Partial<T>,
+    context?: Context,
+  ): T[];
+
+  select: Underscore['filter'];
+
+  reject: Underscore['filter'];
+
+  where<T>(list: T[], attrs: Partial<T>): T[];
+
+  findWhere<T>(list: T[], attrs: Partial<T>): T;
+
+  every<T, Context>(
+    list: T[],
+    iterator?: ListIterator<T[], boolean, Context>,
+    context?: Context,
+  ): boolean;
+
+  every<T, Context>(
+    dict: Dict<T>,
+    iterator?: DictIterator<Dict<T>, boolean, Context>,
+    context?: Context,
+  ): boolean;
+
+  all: Underscore['every'];
+
+  some: Underscore['every'];
+
+  any: Underscore['every'];
+
+  contains<T>(
+    list: T[] | Dict<T>,
+    value: T,
+    fromIndex?: number,
+  ): boolean;
+
+  include: Underscore['contains'];
+
+  includes: Underscore['contains'];
+
+  invoke<T, MethodName extends keyof T, Args extends any[], Result>(
+    list: T[],
+    methodName: T[MethodName] extends (...args: Args) => Result ? MethodName : never, // TODO: check
+    ...args: Args
+  ): Result[];
+
+  pluck<Member, Prop extends keyof Member, Context>(
+    list: Member[],
+    iterator: Prop,
+    context?: Context,
+  ): Member[Prop][];
+
+  max<N extends number>(list: N[]): N;
+
+  max<N extends number, D extends Dict<N>>(dict: D): N;
+
+  max<T, Context>(
+    list: T[],
+    iterator: ListIterator<T[], number, Context>,
+    context?: Context,
+  ): T;
+
+  max<T, Context>(
+    dict: Dict<T>,
+    iterator: DictIterator<Dict<T>, number, Context>,
+    context?: Context,
+  ): T;
+
+  max<T, Prop extends keyof T, Context>(
+    corpus: T[] | Dict<T>,
+    iterator: Prop,
+    context?: Context,
+  ): T[Prop] extends number ? T : never; // TODO: check (if iterator doesn't return number, results in Infinity)
+
+  min: Underscore['max'];
+
+  sortBy<T, Context>(
+    list: T[],
+    iterator: ListIterator<T[], any, Context>,
+    context?: Context,
+  ): T[];
+
+  sortBy<T, Context>(
+    dict: Dict<T>,
+    iterator: DictIterator<Dict<T>, any, Context>,
+    context?: Context,
+  ): T[];
+
+  sortBy<T, Context>(
+    corpus: T[] | Dict<T>,
+    iterator: keyof T,
+    context?: Context,
+  ): T[];
+
+  groupBy<Member, Category extends string | number, Context>(
+    list: Member[],
+    iterator: ListIterator<Member[], Category, Context>,
+  ): { [K in Category]: Member[] };
+
+  groupBy<Member, Category extends string | number, Context>(
+    list: Dict<Member>,
+    iterator: DictIterator<Dict<Member>, Category, Context>,
+  ): { [K in Category]: Member[] };
+
+  groupBy<Member, Category extends keyof Member, Context>(
+    list: Member[] | Dict<Member>,
+    iterator: Category,
+  ): { [K in Category]: Member[] };
+
+  indexBy<Member, Index extends string | number, Context>(
+    list: Member[],
+    iterator: ListIterator<Member[], Index, Context>,
+  ): { [K in Index]: Member };
+
+  indexBy<Member, Index extends string | number, Context>(
+    list: Dict<Member>,
+    iterator: DictIterator<Dict<Member>, Index, Context>,
+  ): { [K in Index]: Member };
+
+  indexBy<Member, Index extends keyof Member, Context>(
+    list: Member[] | Dict<Member>,
+    iterator: Index,
+  ): { [K in Index]: Member };
+
+  countBy<Member, Category extends string | number, Context>(
+    list: Member[],
+    iterator: ListIterator<Member[], Category, Context>,
+  ): { [K in Category]: number };
+
+  countBy<Member, Category extends string | number, Context>(
+    list: Dict<Member>,
+    iterator: DictIterator<Dict<Member>, Category, Context>,
+  ): { [K in Category]: number };
+
+  countBy<Member, Category extends keyof Member, Context>(
+    list: Member[] | Dict<Member>,
+    iterator: Category,
+  ): { [K in Category]: number };
+
+  shuffle<T>(list: T[] | Dict<T>): T[];
+
+  sample<T>(list: T[] | Dict<T>): T;
+
+  sample<T>(list: T[] | Dict<T>, n: number): T[];
+
+  toArray<T>(list: T[] | Dict<T>): T[];
+
+  size<T>(list: T[] | Dict<T>): number;
+
+  partition<Member, Context>(
+    list: Member[],
+    iterator: ListIterator<Member[], boolean, Context>,
+  ): [Member[], Member[]];
+
+  partition<Member, Context>(
+    list: Dict<Member>,
+    iterator: DictIterator<Dict<Member>, boolean, Context>,
+  ): [Member[], Member[]];
+
+  partition<Member, Prop extends keyof Member, Context>(
+    list: Member[] | Dict<Member>,
+    iterator: Prop,
+  ): [Member[], Member[]];
+
+  first<T>(list: T[]): T | undefined;
+
+  first<T>(list: T[], n: number): T[];
+
+  head: Underscore['first'];
+
+  take: Underscore['first'];
+
+  initial: Underscore['first'];
+
+  last: Underscore['first'];
+
+  rest<T>(list: T[], n?: number): T[];
+
+  tail: Underscore['first'];
+
+  drop: Underscore['first'];
+
+  compact<T>(list: T[]): Exclude<T, null | undefined | false | "" | 0>[]
+
+  flatten<T>(list: (T | T[])[], shallow: true): T[];
+
+  flatten<T>(list: T[], shallow?: false): DeepFlattenArray<T>;
+
+  without<T>(list: T[], ...values: T[]): T[];
+
+  union<T>(...lists: T[][]): T[];
+
+  intersection: Underscore['union'];
+
+  difference<T, K>(list: T[], ...removals: K[][]): T[];
+
+  uniq<Member, Context>(
+    list: Member[],
+    isSorted?: boolean,
+    iterator?: ListIterator<Member[], any, Context> | keyof Member,
+    context?: Context,
+  ): Member[];
+
+  uniq<Member, Context>(
+    list: Member[],
+    iterator?: ListIterator<Member[], any, Context> | keyof Member,
+    context?: Context,
+  ): Member[];
+
+  unique: Underscore['uniq'];
+
+  zip<T extends any[]>(...lists: T[]): (T[number])[][];
+
+  unzip<T extends any[]>(list: T[]): (T[number])[][];
+
+  object<Key extends string | number, Value>(
+    ...keyValuePairs: [Key, Value][]
+  ): Record<Key, Value>;
+
+  object<Key extends string | number, Value>(
+    keys: Key[],
+    values: Value[],
+  ): Record<Key, Value>;
+
+  indexOf<T>(
+    list: T[],
+    value: T,
+    isSorted?: boolean,
+  ): number;
+
+  indexOf<T>(
+    list: T[],
+    value: T,
+    fromIndex: number,
+  ): number;
+
+  lastIndexOf<T>(
+    list: T[],
+    value: T,
+    fromIndex: number,
+  ): number;
+
+  findIndex<Member, Context>(
+    list: Member[],
+    iterator: ListIterator<Member[], boolean, Context> | keyof Member | Partial<Member>,
+    context?: Context,
+  ): number;
+
+  findLastIndex: Underscore['findIndex'];
+
+  sortedIndex<Member, Context>(
+    list: Member[],
+    value: Member,
+    iterator?: ListIterator<Member[], any, Context> | keyof Member | Partial<Member>,
+    context?: Context,
+  ): number;
+
+  range(start: number, stop: number, step?: number): number[];
+
+  range(stop: number): number[];
+
+  chunk<T>(list: T[], count: number): T[][];
+
+  bind<Context, RemainingArgs extends any[], Result>(
+    fn: (...args: RemainingArgs) => Result, context: Context,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  bind<Context, RemainingArgs extends any[], Result, A>(
+    fn: (a: A, ...args: RemainingArgs) => Result, context: Context, a: A,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  bind<Context, RemainingArgs extends any[], Result, A, B>(
+    fn: (a: A, b: B, ...args: RemainingArgs) => Result, context: Context, a: A, b: B,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  bind<Context, RemainingArgs extends any[], Result, A, B, C>(
+    fn: (a: A, b: B, c: C, ...args: RemainingArgs) => Result, context: Context, a: A, b: B, c: C,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  bind<Context, RemainingArgs extends any[], Result, A, B, C, D>(
+    fn: (a: A, b: B, c: C, d: D, ...args: RemainingArgs) => Result, context: Context, a: A, b: B, c: C, d: D,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  bind<Context, RemainingArgs extends any[], Result, A, B, C, D, E>(
+    fn: (a: A, b: B, c: C, d: D, e: E, ...args: RemainingArgs) => Result, context: Context, a: A, b: B, c: C, d: D, e: E,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  bind<Context, RemainingArgs extends any[], Result, A, B, C, D, E, F>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, ...args: RemainingArgs) => Result, context: Context, a: A, b: B, c: C, d: D, e: E, f: F,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  bind<Context, RemainingArgs extends any[], Result, A, B, C, D, E, F, G>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, ...args: RemainingArgs) => Result, context: Context, a: A, b: B, c: C, d: D, e: E, f: F, g: G,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  bind<Context, RemainingArgs extends any[], Result, A, B, C, D, E, F, G, H>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, ...args: RemainingArgs) => Result, context: Context, a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  bind<Context, RemainingArgs extends any[], Result, A, B, C, D, E, F, G, H, I>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, ...args: RemainingArgs) => Result, context: Context, a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  bind<Context, RemainingArgs extends any[], Result, A, B, C, D, E, F, G, H, I, J>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, ...args: RemainingArgs) => Result, context: Context, a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  bind<Context, RemainingArgs extends any[], Result, A, B, C, D, E, F, G, H, I, J, K>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, ...args: RemainingArgs) => Result, context: Context, a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  bind<Context, RemainingArgs extends any[], Result, A, B, C, D, E, F, G, H, I, J, K, L>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L, ...args: RemainingArgs) => Result, context: Context, a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L,
+  ): (this: Context, ...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result>(
+    fn: (...args: RemainingArgs) => Result,
+  ): (...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result, A>(
+    fn: (a: A, ...args: RemainingArgs) => Result, a: A,
+  ): (...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result, A, B>(
+    fn: (a: A, b: B, ...args: RemainingArgs) => Result, a: A, b: B,
+  ): (...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result, A, B, C>(
+    fn: (a: A, b: B, c: C, ...args: RemainingArgs) => Result, a: A, b: B, c: C,
+  ): (...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result, A, B, C, D>(
+    fn: (a: A, b: B, c: C, d: D, ...args: RemainingArgs) => Result, a: A, b: B, c: C, d: D,
+  ): (...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result, A, B, C, D, E>(
+    fn: (a: A, b: B, c: C, d: D, e: E, ...args: RemainingArgs) => Result, a: A, b: B, c: C, d: D, e: E,
+  ): (...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result, A, B, C, D, E, F>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, ...args: RemainingArgs) => Result, a: A, b: B, c: C, d: D, e: E, f: F,
+  ): (...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result, A, B, C, D, E, F, G>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, ...args: RemainingArgs) => Result, a: A, b: B, c: C, d: D, e: E, f: F, g: G,
+  ): (...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result, A, B, C, D, E, F, G, H>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, ...args: RemainingArgs) => Result, a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H,
+  ): (...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result, A, B, C, D, E, F, G, H, I>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, ...args: RemainingArgs) => Result, a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I,
+  ): (...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result, A, B, C, D, E, F, G, H, I, J>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, ...args: RemainingArgs) => Result, a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J,
+  ): (...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result, A, B, C, D, E, F, G, H, I, J, K>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, ...args: RemainingArgs) => Result, a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K,
+  ): (...args: RemainingArgs) => Result;
+
+  partial<RemainingArgs extends any[], Result, A, B, C, D, E, F, G, H, I, J, K, L>(
+    fn: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L, ...args: RemainingArgs) => Result, a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L,
+  ): (...args: RemainingArgs) => Result;
+
+  memoize<Args extends any[], Result, Fn extends (...args: Args) => Result>(
+    fn: Fn,
+    hasher?: (...args: Args) => string,
+  ): Fn & { cache: Dict<Result> };
+
+  delay<A extends any[]>(fn: (...args: A) => any, wait: number, ...args: A): number;
+
+  defer<A extends any[]>(fn: (...args: A) => any, ...args: A): number;
+
+  throttle<Fn extends (...args: any[]) => any>(
+    fn: Fn,
+    wait: number,
+    options: { leading?: boolean; trailing?: boolean },
+  ): Fn & { cancel(): void };
+
+  debounce<Fn extends (...args: any[]) => any>(
+    fn: Fn,
+    wait: number,
+    immediate?: boolean,
+  ): Fn & { cancel(): void };
+
+  once<Fn extends (...args: any[]) => any>(fn: Fn): Fn;
+
+  // // restArguments<Fn extends (...args: any[]) => any>(
+  // //   fn: Fn,
+  // //   startIndex?: number,
+  // // ): Fn;
+  // restArguments<Args extends any[], Result, Fn extends (...args: Args) => Result>(
+  //   fn: Fn,
+  // ): (a: Args[0], ...args: DropFirstInTuple<Args>) => Result;
+}
+
+// Gets the length of an array/tuple type:
+//
+//   type FooLength = LengthOfTuple<[string, number, boolean]>;
+//   //=> 3
+//
+export type LengthOfTuple<T extends (any[]|readonly any[])> = T extends { length: infer L } ? L : never;
+
+// Drop the first element of a tuple:
+//
+//   type Foo = DropFirstInTuple<[string, number, boolean]>;
+//   //=> [number, boolean]
+//
+export type DropFirstInTuple<T extends (any[]|readonly any[])> = ((...args: T) => any) extends (arg: any, ...rest: infer U) => any ? U : T;
+
+// Get the type of the last element of a tuple:
+//
+//   type Foo = LastInTuple<[string, number, boolean]>;
+//   //=> boolean
+//
+//   function lastArg<T extends any[]>(...args: T): LastInTuple<T> {
+//     return args[args.length - 1];
+//   }
+//
+//   const bar = lastArg(1);
+//   type Bar = typeof bar;
+//   //=> number
+//
+//   const baz = lastArg(1, true, "hey", 123, 1, 2, 3, 4, 5, 6, 7, -1, false);
+//   type Baz = typeof baz;
+//   //=> boolean
+//
+export type LastInTuple<T extends (any[]|readonly any[])> = T[LengthOfTuple<DropFirstInTuple<T>>];
+
+
+// interface Bindish<Option> {
+//   <Option, RemainingArgs extends any[], Result, A, B, C, D>(
+//     fn: (a: A, b: B, c: C, d: D, ...args: RemainingArgs) => Result, option: Option, a: A, b: B, c: C, d: D,
+//   ): (...args: RemainingArgs) => Result;
+// }
+
+// // Drop the first element of a tuple:
+// //
+// //   type Foo = DropFirstInTuple<[string, number, boolean]>;
+// //   //=> [number, boolean]
+// //
+// export type DropFirstInTuple<T extends (any[]|readonly any[])> = ((...args: T) => any) extends (arg: any, ...rest: infer U) => any ? U : T;
+
+// // interface PartialApplication<Fn extends (...args: any[]) => any> {
+// // interface PartialApplication<T extends { Fn: (...args: any[]) => any } | { Fn: (...args: any[]) => any, Option: any }> {
+// interface PartialApplication<Option extends undefined | any = undefined> {
+//   // <RemainingArgs extends any[], Result, A, B, C, D, E, F, G, H, I, J, K, L>(fn: T): Result
+//   // <RemainingArgs extends any[], Result>(
+//   //   fn: T['Fn'],
+//   //   [option, ...args]: T extends { Option: any } ? [T['Option'], RemainingArgs] : RemainingArgs,
+//   // ): Result;
+  
+//   <RemainingArgs extends any[], Result>(
+//     fn: (...args: RemainingArgs) => Result,
+//     option: Option extends undefined ? RemainingArgs[0] : Option,
+//     ...args: Option extends undefined ? DropFirstInTuple<Partial<RemainingArgs>> : Partial<RemainingArgs>
+//   ): (...args: RemainingArgs) => Result;
+//   // <RemainingArgs extends any[], Result, OptionArg extends (Option extends undefined ? RemainingArgs[0] : Option), PartialArgs extends (Option extends undefined ? DropFirstInTuple<Partial<RemainingArgs>> : Partial<RemainingArgs>)>(
+//   //   fn: (...args: RemainingArgs) => Result,
+//   //   option: OptionArg,
+//   //   ...args: PartialArgs
+//   // ): (...args: RemainingArgs) => Result;
+
+//   <RemainingArgs extends any[], Result, A>(
+//     fn: (a: A, ...args: RemainingArgs) => Result,
+//     option: Option extends undefined ? RemainingArgs[0] : Option,
+//     a: A,
+//     ...args: Option extends undefined ? DropFirstInTuple<Partial<RemainingArgs>> : Partial<RemainingArgs>
+//   ): (...args: RemainingArgs) => Result;
+//   // <RemainingArgs extends any[], Result, A, OptionArg extends (undefined extends Option ? RemainingArgs[0] : Option), PartialArgs extends (undefined extends Option ? DropFirstInTuple<Partial<RemainingArgs>> : Partial<RemainingArgs>)>(
+//   //   fn: (a: A, ...args: RemainingArgs) => Result,
+//   //   option: OptionArg,
+//   //   a: A,
+//   //   ...args: PartialArgs
+//   // ): (...args: RemainingArgs) => Result;
+
+//   <RemainingArgs extends any[], Result, A>(
+//     fn: (a: A, ...args: RemainingArgs) => Result,
+//     option: Option extends undefined ? A : Option,
+//     a: RemainingArgs[0],
+//     ...args: Option extends undefined ? DropFirstInTuple<Partial<RemainingArgs>> : Partial<RemainingArgs>
+//   ): (...args: RemainingArgs) => Result;
+// }
+
+// declare const blahblah: PartialApplication<{}>;
+
+// const mekko = blahblah((x: number, y: boolean, z: number): symbol => Symbol('hi'), {}, 123, true);
+
+declare function boop(a: number, b: boolean, c?: string): null;
+
+declare const blahmmo: Underscore['partial'];
+
+const boep = blahmmo(boop, 123, true);
+
+
+type BoopArgs = typeof boop extends (...args: infer A) => any ? A : never;
+declare const blah: BoopArgs;
+
+// type Bisky = {
+//   [K in BoopArgs['length']]:
+// }
+
+type Fwick = BoopArgs['length'];
+type Fwicko = keyof Fwick;
+
+
+type Foo = [number, boolean, string];
+type Bar = Foo & undefined[];
+type Baz = Partial<Foo>;
+declare const bar: Bar;
+const fooby = bar[0];
+declare const bar2: Bisky;
+const fooby2 = bar2[0];
+const whaazzz: Baz = [123, true];
+
+
+// const foo = [1, [true, false, [1, 2, 3, [undefined, 123, Symbol('hello'), [{a: "A"}, {a: "B"}, {z: 123}]]]], ['hi'], null];
+
+// const bloobers = [1, [true, false], null, ['hi']];
+
+// type BlooberMember = (typeof bloobers)[number];
+// type BlooberNonArrays = NonArrays<BlooberMember>;
+// type BlooberArrays = Arrays<BlooberMember>;
+// type BlooberArrays2 = Arrays<BlooberArrays[number]>;
+// type Crap = BlooberArrays2 extends never ? true : false;
+// type Sweet = BlooberArrays extends never ? true : false;
+// type Woot = DeepDictUnionizeArray<BlooberMember>;
+// // type Woot = DeepDictUnionizeArray<typeof bloobers>;
+// declare const woot: Woot[string];
+// declare const woot2: DeepUnionizeArray<typeof bloobers>;
+// declare const woot3: DeepUnionizeArray<typeof foo>;
+// declare const woot4: DeepFlattenArray<typeof foo>;
+// // declare const woot: Woot;
+// // const woohoo = woot(bloobers)
+
+// // declare const blah: Unpack<(typeof foo)[number]>;
+
+// // declare const bar: Flatten<typeof foo>;
+// // declare const bar: Flatten<typeof foo>;
+// // declare const bar: FlattenFunction;
+// declare const bar: DeepDictUnionizeArray<typeof foo>[string];
+// // const baz = bar['hi'];
+
+// // interface Flatten<T extends any[]> {
+// //   (list: T): T[number]
+// // }
+
+// // declare function foo<T>(list: T[]): T;
+
+// // const blah = foo([1, false, 3])
+
+type BoundUnderscore<T> = {
+  [K in keyof Underscore]: Underscore[K] extends (value: T, ...args: infer A) => infer R ? (...args: A) => R : never;
+}
+
+declare const _1: Underscore;
+
+// const blah = _1('hi').foo(true);
+// const blam = _1(123).bar('hi', false);
+// const foo = _1.sample([1, 2, 3, 4]);
+// const foo = _1.sample([1, 2, 3, 4]);
+// const foo = _1.compact([1, false, 0, 2, 3, 4, undefined, null, 'hi', '']);
+// const foo = _1.zip([1, 2, 3], [true, false, true]);
+// const bar = _1.unzip([[1, 2, 3], [true, false, true]]);
+// _1.bind
+
+
+(function(this: any) {
 
   // Baseline setup
   // --------------
