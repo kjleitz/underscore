@@ -567,13 +567,54 @@ export interface Underscore {
 
   once<Fn extends (...args: any[]) => any>(fn: Fn): Fn;
 
-  // // restArguments<Fn extends (...args: any[]) => any>(
-  // //   fn: Fn,
-  // //   startIndex?: number,
-  // // ): Fn;
-  // restArguments<Args extends any[], Result, Fn extends (...args: Args) => Result>(
-  //   fn: Fn,
-  // ): (a: Args[0], ...args: DropFirstInTuple<Args>) => Result;
+  after<Args extends any[], Result, Fn extends (...args: Args) => Result>(
+    count: number,
+    fn: Fn,
+  ): (...args: Args) => Result | undefined;
+
+  before: Underscore['after'];
+
+  wrap<Fn extends (...args: any[]) => any, WrapperArgs extends any[], WrapperResult, WrapperFn extends (fn: Fn, ...args: WrapperArgs) => WrapperResult>(
+    fn: Fn,
+    wrapper: WrapperFn,
+  ): (...args: WrapperArgs) => WrapperResult;
+
+  negate<Args extends any[], Fn extends (...args: Args) => any>(
+    fn: Fn,
+  ): (...args: Args) => boolean;
+
+  compose<Functions extends ((...args: any[]) => any)[]>(
+    ...functions: Functions
+  ): ReturnType<LastInTuple<Functions>>;
+
+  // TODO: better types... is this even possible? seems like it isn't, at least
+  // not without non-last-position rest arguments/non-last-position rest types
+  // in tuples.
+  restArguments<Args extends any[], Result, Fn extends (...args: (Args[number] | Args[number][])[]) => Result>(
+    fn: Fn,
+  ): (...args: Args) => Result;
+
+  keys<Key extends string>(dict: Record<Key, any>): Key[];
+
+  keys(list: any[]): string[]; // numeric strings
+
+  // TODO: better types... check constructor/prototype? Gotta recursively go
+  // down the prototype chain, though, which is a PitA.
+  allKeys(obj: any): string[];
+
+  values<T>(dict: Dict<T>): T[];
+
+  values<T>(list: T[]): T[];
+
+  mapObject<Val, Key extends string, D extends Record<Key, Val>, Result, Context>(
+    dict: D,
+    iterator: DictIterator<Val, Result, Context>,
+    context?: Context,
+  ): Record<Key, Result>;
+
+  pairs<Val, D extends Dict<Val>>(
+    dict: D,
+  ): { [index: number]: { [K in keyof D]: D[K] }[keyof D] }
 }
 
 // Gets the length of an array/tuple type:
@@ -745,6 +786,7 @@ declare const _1: Underscore;
 // const foo = _1.zip([1, 2, 3], [true, false, true]);
 // const bar = _1.unzip([[1, 2, 3], [true, false, true]]);
 // _1.bind
+const wer = _1.keys(1);
 
 
 (function(this: any) {
